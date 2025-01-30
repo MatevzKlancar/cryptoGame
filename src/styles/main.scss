@@ -9,68 +9,91 @@ html {
 }
 
 body {
+  margin: 0;
+  padding: 0;
   min-height: 100%;
-  background: linear-gradient($background-color, color.adjust($background-color, $lightness: 10%));
+  background: linear-gradient(
+    $background-color,
+    color.adjust($background-color, $lightness: 10%)
+  );
   color: $foreground-color;
-  font-family: 'Roboto', sans-serif;
+  font-family: "Roboto", sans-serif;
   text-align: center;
+  overflow: hidden;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Oswald', sans-serif;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Oswald", sans-serif;
   font-weight: 400;
 }
 
-h1, a:link, a:active, a:visited, a:hover {
+h1,
+a:link,
+a:active,
+a:visited,
+a:hover {
   color: $highlight-color;
 }
 
-#viewport {
-  border: 1px solid $foreground-color;
-  background-color: white;
-  box-shadow: 10px 10px 50px black;
-}
-
-.container {
+.game-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
 }
 
-.cell {
-  width: 400px;
+#viewport {
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid $foreground-color;
+  border-radius: 8px;
+  box-shadow: 10px 10px 50px black;
 }
 
-ul {
-  display: inline-block;
-  text-align: left;
-  margin: 0;
+.wallet-info {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px 20px;
+  border-radius: 8px;
+  color: white;
+  font-family: "Oswald", sans-serif;
+  display: flex;
+  gap: 20px;
+  z-index: 10;
 }
 
 .score-history {
-    position: fixed;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.7);
-    padding: 20px;
-    border-radius: 10px;
-    color: white;
-    font-family: 'Oswald', sans-serif;
-    
-    h2 {
-        margin: 0 0 15px 0;
-        font-size: 24px;
-        text-align: left;
-        color: #66eeff;
-    }
-    
-    .score-item {
-        font-size: 20px;
-        margin: 8px 0;
-        text-align: left;
-    }
+  position: fixed;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+  font-family: "Oswald", sans-serif;
+
+  h2 {
+    margin: 0 0 15px 0;
+    font-size: 24px;
+    text-align: left;
+    color: $highlight-color;
+  }
+
+  .score-item {
+    font-size: 20px;
+    margin: 8px 0;
+    text-align: left;
+  }
 }
 
-// ... rest of the CSS ... 
+// ... rest of the CSS ...

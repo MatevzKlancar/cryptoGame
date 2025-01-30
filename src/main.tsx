@@ -1,10 +1,13 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import { WalletProvider } from "./context/WalletContext";
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <WalletProvider>
+      <App />
+    </WalletProvider>
   </React.StrictMode>
 );
 
@@ -14,4 +17,4 @@ window.onload = () => {
 };
 window.onclick = () => {
   window.focus();
-}; 
+};
