@@ -22,38 +22,29 @@ export class WalletService {
   constructor() {
     this.phantomWallet = (window as PhantomWindow)?.solana;
     this.setupWalletListeners();
-    this.loadLivesFromStorage();
   }
 
-  private loadLivesFromStorage(): void {
-    if (this.walletAddress) {
-      const lives = localStorage.getItem(`lives_${this.walletAddress}`);
-      if (lives !== null) {
-        this.remainingLives = parseInt(lives);
-      }
+  private loadLivesFromStorage(address: string): void {
+    const lives = localStorage.getItem(`lives_${address}`);
+    if (lives === null) {
+      // First time user, set initial lives
+      this.remainingLives = 10;
+      this.saveLivesToStorage(address);
+    } else {
+      this.remainingLives = parseInt(lives);
     }
   }
 
-  private saveLivesToStorage(): void {
-    if (this.walletAddress) {
-      localStorage.setItem(
-        `lives_${this.walletAddress}`,
-        this.remainingLives.toString()
-      );
-    }
+  private saveLivesToStorage(address: string): void {
+    localStorage.setItem(`lives_${address}`, this.remainingLives.toString());
   }
 
   public decrementLives(): void {
-    if (this.remainingLives > 0) {
+    if (this.walletAddress && this.remainingLives > 0) {
       this.remainingLives--;
-      this.saveLivesToStorage();
-      // Dispatch event for UI update
+      this.saveLivesToStorage(this.walletAddress);
       document.dispatchEvent(new Event("livesUpdated"));
     }
-  }
-
-  public getRemainingLives(): number {
-    return this.remainingLives;
   }
 
   public hasLivesRemaining(): boolean {
@@ -71,6 +62,9 @@ export class WalletService {
       if (this.phantomWallet.isConnected) {
         this.walletAddress = this.phantomWallet.publicKey?.toString() || null;
         this.isWalletConnected = true;
+        if (this.walletAddress) {
+          this.loadLivesFromStorage(this.walletAddress);
+        }
         document.dispatchEvent(new Event("walletConnected"));
         return true;
       }
@@ -78,6 +72,7 @@ export class WalletService {
       const resp = await this.phantomWallet.connect();
       this.walletAddress = resp.publicKey.toString();
       this.isWalletConnected = true;
+      this.loadLivesFromStorage(this.walletAddress);
       document.dispatchEvent(new Event("walletConnected"));
       return true;
     } catch (error) {
@@ -86,20 +81,15 @@ export class WalletService {
     }
   }
 
-  public isConnected(): boolean {
-    return this.isWalletConnected;
-  }
-
-  public getWalletAddress(): string | null {
-    return this.walletAddress;
-  }
-
   private setupWalletListeners(): void {
     if (!this.phantomWallet) return;
 
     this.phantomWallet.on("connect", () => {
       this.isWalletConnected = true;
       this.walletAddress = this.phantomWallet?.publicKey?.toString() || null;
+      if (this.walletAddress) {
+        this.loadLivesFromStorage(this.walletAddress);
+      }
       document.dispatchEvent(new Event("walletConnected"));
     });
 
@@ -113,24 +103,23 @@ export class WalletService {
     if (this.phantomWallet.isConnected) {
       this.isWalletConnected = true;
       this.walletAddress = this.phantomWallet.publicKey?.toString() || null;
+      if (this.walletAddress) {
+        this.loadLivesFromStorage(this.walletAddress);
+      }
       document.dispatchEvent(new Event("walletConnected"));
     }
   }
 
-  private updateUIState(): void {
-    const walletStatus = document.querySelector(".wallet-status");
-    if (walletStatus instanceof HTMLElement) {
-      walletStatus.style.display = this.isWalletConnected ? "none" : "block";
-    }
+  public isConnected(): boolean {
+    return this.isWalletConnected;
+  }
 
-    // Update any game controls that should be disabled when wallet is not connected
-    const gameControls = document.querySelectorAll(".game-control");
-    gameControls.forEach((control) => {
-      if (control instanceof HTMLElement) {
-        control.style.pointerEvents = this.isWalletConnected ? "auto" : "none";
-        control.style.opacity = this.isWalletConnected ? "1" : "0.5";
-      }
-    });
+  public getWalletAddress(): string | null {
+    return this.walletAddress;
+  }
+
+  public getRemainingLives(): number {
+    return this.remainingLives;
   }
 
   initializePlayer(): void {

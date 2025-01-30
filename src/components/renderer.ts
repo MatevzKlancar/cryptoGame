@@ -10,6 +10,7 @@ import { Menu } from "./menu";
 import { Volume } from "./volume";
 import { Platform } from "./platform";
 import { ScoreHistory } from "./scoreHistory";
+import { WalletService } from "../wallet";
 
 export class Renderer {
   // Constants
@@ -38,11 +39,17 @@ export class Renderer {
   private controller: Controller;
   private scoreHistory: ScoreHistory;
   private animationFrameId: number | null = null;
+  private walletService: WalletService;
 
-  constructor(canvas: HTMLCanvasElement, controller: Controller) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    controller: Controller,
+    walletService: WalletService
+  ) {
     this.canvas = canvas;
     this.context = canvas.getContext("2d") as CanvasRenderingContext2D;
     this.controller = controller;
+    this.walletService = walletService;
 
     this.volume = new Volume(
       {
@@ -135,12 +142,15 @@ export class Renderer {
       controller,
       this.background,
       () => {
-        this.player.Reset();
-        this.platform.Reset();
-        this.viewport.Reset();
-        this.scoreboard.Reset();
-        this.background.Reset();
-        this.isRunning = true;
+        if (this.walletService.hasLivesRemaining()) {
+          this.walletService.decrementLives();
+          this.player.Reset();
+          this.platform.Reset();
+          this.viewport.Reset();
+          this.scoreboard.Reset();
+          this.background.Reset();
+          this.isRunning = true;
+        }
       },
       this.volume
     );

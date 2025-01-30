@@ -17,7 +17,7 @@ function App() {
 
     const canvas = canvasRef.current;
     const controller = new Controller(canvas);
-    const renderer = new Renderer(canvas, controller);
+    const renderer = new Renderer(canvas, controller, walletService);
     renderer.Start();
 
     // Ensure keyboard events when loaded in an iframe (fix for itch.io)
@@ -30,7 +30,7 @@ function App() {
       // Add cleanup if needed
       renderer.Stop();
     };
-  }, [isConnected]);
+  }, [isConnected, walletService]);
 
   useEffect(() => {
     const updateLives = () => {
