@@ -3,10 +3,11 @@ import { Connection, PublicKey } from "@solana/web3.js";
 // Type definitions for Phantom wallet
 interface PhantomWindow extends Window {
   solana?: {
-    connect(): Promise<{ publicKey: PublicKey }>;
+    isConnected: boolean;
+    connect(): Promise<{ publicKey: { toString(): string } }>;
     disconnect(): Promise<void>;
     on(event: string, callback: () => void): void;
-    isPhantom?: boolean;
+    publicKey?: { toString(): string };
   };
 }
 
@@ -16,10 +17,10 @@ export class WalletService {
   private isWalletConnected: boolean = false;
   private walletAddress: string | null = null;
   private remainingLives: number = 10;
-  private phantomWallet: PhantomWindow["solana"];
+  private phantomWallet: PhantomWindow["solana"] | undefined;
 
   constructor() {
-    this.phantomWallet = window?.solana;
+    this.phantomWallet = (window as PhantomWindow)?.solana;
     this.setupWalletListeners();
     this.loadLivesFromStorage();
   }
@@ -66,10 +67,18 @@ export class WalletService {
         throw new Error("Please install Phantom wallet!");
       }
 
+      // Check if already connected
+      if (this.phantomWallet.isConnected) {
+        this.walletAddress = this.phantomWallet.publicKey?.toString() || null;
+        this.isWalletConnected = true;
+        document.dispatchEvent(new Event("walletConnected"));
+        return true;
+      }
+
       const resp = await this.phantomWallet.connect();
       this.walletAddress = resp.publicKey.toString();
       this.isWalletConnected = true;
-      this.loadLivesFromStorage();
+      document.dispatchEvent(new Event("walletConnected"));
       return true;
     } catch (error) {
       console.error("Error connecting wallet:", error);
@@ -86,16 +95,25 @@ export class WalletService {
   }
 
   private setupWalletListeners(): void {
-    if (this.phantomWallet) {
-      this.phantomWallet.on("connect", () => {
-        document.dispatchEvent(new Event("walletConnected"));
-      });
+    if (!this.phantomWallet) return;
 
-      this.phantomWallet.on("disconnect", () => {
-        this.isWalletConnected = false;
-        this.walletAddress = null;
-        document.dispatchEvent(new Event("walletDisconnected"));
-      });
+    this.phantomWallet.on("connect", () => {
+      this.isWalletConnected = true;
+      this.walletAddress = this.phantomWallet?.publicKey?.toString() || null;
+      document.dispatchEvent(new Event("walletConnected"));
+    });
+
+    this.phantomWallet.on("disconnect", () => {
+      this.isWalletConnected = false;
+      this.walletAddress = null;
+      document.dispatchEvent(new Event("walletDisconnected"));
+    });
+
+    // Check if already connected on initialization
+    if (this.phantomWallet.isConnected) {
+      this.isWalletConnected = true;
+      this.walletAddress = this.phantomWallet.publicKey?.toString() || null;
+      document.dispatchEvent(new Event("walletConnected"));
     }
   }
 
