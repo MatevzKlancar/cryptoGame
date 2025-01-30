@@ -5,16 +5,16 @@ export class Background {
 
   constructor(groundY: number) {
     this.obstacles = [];
-    this.speed = 5;
+    this.speed = 3;
     this.groundY = groundY;
     this.addObstacle();
   }
 
   addObstacle() {
-    const minHeight = 50;
-    const maxHeight = 150;
-    const minWidth = 20;
-    const maxWidth = 60;
+    const minHeight = 40;
+    const maxHeight = 100;
+    const minWidth = 15;
+    const maxWidth = 40;
 
     this.obstacles.push({
       x: 800,
@@ -40,8 +40,8 @@ export class Background {
       this.addObstacle();
     }
 
-    // Increase speed over time
-    this.speed += 0.001;
+    // More gradual speed increase
+    this.speed += 0.0002;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
