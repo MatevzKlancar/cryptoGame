@@ -1,9 +1,6 @@
-export interface Click {
-  x: number;
-  y: number;
-}
+import { Point } from "./point";
 
-export interface Point {
+export interface Click {
   x: number;
   y: number;
 }
