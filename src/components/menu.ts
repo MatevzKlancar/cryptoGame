@@ -96,15 +96,26 @@ export class Menu implements Renderable {
 
   public Render(renderContext: CanvasRenderingContext2D): Renderable[] {
     const mouseClick: Click | null = this.controller.getClick();
+    if (mouseClick && this.isPointOnButton(mouseClick) && this.hasLives) {
+      this.buttonClick.play();
+      this.onStartGame();
+      this.updateWalletStatus();
+    }
+
+    // Add a separate check for Enter key
     if (
-      ((mouseClick && this.isPointOnButton(mouseClick)) ||
-        this.controller.isKeyPressed("enter") ||
-        this.controller.isKeyPressed("e")) &&
-      this.hasLives
+      this.controller.isKeyPressed("enter") &&
+      this.hasLives &&
+      !this.isProcessingCallback
     ) {
       this.buttonClick.play();
       this.onStartGame();
       this.updateWalletStatus();
+      this.isProcessingCallback = true;
+      // Reset the processing flag after a short delay
+      setTimeout(() => {
+        this.isProcessingCallback = false;
+      }, 1000); // 1 second cooldown
     }
 
     const mousePos = this.controller.getMousePosition();
