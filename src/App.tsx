@@ -8,9 +8,34 @@ import "./styles/main.scss";
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { isConnected, walletService } = useWallet();
-  const [remainingLives, setRemainingLives] = useState(
-    walletService.getRemainingLives()
-  );
+  const [remainingLives, setRemainingLives] = useState<string>("0");
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    const updateLives = async () => {
+      if (walletService) {
+        const lives = await walletService.getRemainingLives();
+        setRemainingLives(lives);
+      }
+    };
+
+    updateLives();
+    // Listen for lives updates
+    const handleLivesUpdate = () => {
+      updateLives();
+    };
+    document.addEventListener("livesUpdated", handleLivesUpdate);
+
+    return () => {
+      document.removeEventListener("livesUpdated", handleLivesUpdate);
+    };
+  }, [walletService]);
+
+  useEffect(() => {
+    if (walletService) {
+      setWalletAddress(walletService.getWalletAddress());
+    }
+  }, [walletService]);
 
   useEffect(() => {
     if (!canvasRef.current || !isConnected) return;
@@ -32,17 +57,6 @@ function App() {
     };
   }, [isConnected, walletService]);
 
-  useEffect(() => {
-    const updateLives = () => {
-      setRemainingLives(walletService.getRemainingLives());
-    };
-
-    document.addEventListener("livesUpdated", updateLives);
-    return () => {
-      document.removeEventListener("livesUpdated", updateLives);
-    };
-  }, [walletService]);
-
   return (
     <div className="game-container">
       <ConnectWallet />
@@ -50,13 +64,15 @@ function App() {
       {isConnected && (
         <>
           <div className="wallet-info">
-            <span>
-              Wallet: {walletService.getWalletAddress()?.slice(0, 4)}...
-              {walletService.getWalletAddress()?.slice(-4)}
-            </span>
+            {walletAddress && (
+              <span>
+                Wallet: {walletAddress.slice(0, 4)}...
+                {walletAddress.slice(-4)}
+              </span>
+            )}
             <span>Lives: {remainingLives}</span>
           </div>
-          {remainingLives > 0 ? (
+          {remainingLives > "0" ? (
             <canvas ref={canvasRef} id="viewport" width="480" height="800" />
           ) : (
             <div className="no-lives-message">

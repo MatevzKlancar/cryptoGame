@@ -2,53 +2,82 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { WalletService } from "../wallet";
 
 interface WalletContextType {
-  walletService: WalletService;
   isConnected: boolean;
-  remainingLives: number;
+  walletService: WalletService;
+  connect: () => Promise<void>;
+  remainingLives: string;
 }
 
-const WalletContext = createContext<WalletContextType | null>(null);
+const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [walletService] = useState(() => new WalletService());
+export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
-  const [remainingLives, setRemainingLives] = useState(10);
+  const [walletService] = useState(() => new WalletService());
+  const [remainingLives, setRemainingLives] = useState<string>("0");
 
   useEffect(() => {
-    // Update state when wallet connection changes
-    const updateState = () => {
-      setIsConnected(walletService.isConnected());
-      setRemainingLives(walletService.getRemainingLives());
+    const updateLives = async () => {
+      const lives = await walletService.getRemainingLives();
+      setRemainingLives(lives);
     };
 
-    // Initial state
-    updateState();
+    const handleConnect = () => {
+      setIsConnected(true);
+      updateLives();
+    };
 
-    // Add event listeners for wallet state changes
-    document.addEventListener("walletConnected", updateState);
-    document.addEventListener("walletDisconnected", updateState);
+    const handleDisconnect = () => {
+      setIsConnected(false);
+      setRemainingLives("0");
+    };
+
+    const handleLivesUpdate = () => {
+      updateLives();
+    };
+
+    document.addEventListener("walletConnected", handleConnect);
+    document.addEventListener("walletDisconnected", handleDisconnect);
+    document.addEventListener("livesUpdated", handleLivesUpdate);
+
+    // Initial check
+    if (walletService.isConnected()) {
+      setIsConnected(true);
+      updateLives();
+    }
 
     return () => {
-      document.removeEventListener("walletConnected", updateState);
-      document.removeEventListener("walletDisconnected", updateState);
+      document.removeEventListener("walletConnected", handleConnect);
+      document.removeEventListener("walletDisconnected", handleDisconnect);
+      document.removeEventListener("livesUpdated", handleLivesUpdate);
     };
   }, [walletService]);
 
+  const connect = async () => {
+    try {
+      await walletService.connectWallet();
+    } catch (error) {
+      console.error("Failed to connect wallet:", error);
+    }
+  };
+
   return (
     <WalletContext.Provider
-      value={{ walletService, isConnected, remainingLives }}
+      value={{
+        isConnected,
+        walletService,
+        connect,
+        remainingLives,
+      }}
     >
       {children}
     </WalletContext.Provider>
   );
-};
+}
 
-export const useWallet = () => {
+export function useWallet() {
   const context = useContext(WalletContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useWallet must be used within a WalletProvider");
   }
   return context;
-};
+}

@@ -1,153 +1,154 @@
-import {Renderable} from "./renderable";
-import {Controller} from "./controller";
-import {Background} from "./background";
-import {Sound} from "./sound";
-import {Volume} from "./volume";
-import {Sprite} from "./sprite";
-import {Point} from "./point";
+import { Point } from "../types";
+import { Click, Controller } from "./controller";
+import { Background } from "./background";
+import { Volume } from "./volume";
+import { WalletService } from "../wallet";
 
-export class Menu implements Renderable {
-	private static titleFontSizeInPx: number = 90;
-	private static scoreFontSizeInPx: number = 50;
-	private static playFontSizeInPx: number = 50;
-	private static buttonWidth: number = 225;
-	private static buttonHeight: number = 100;
-	private static fadeInRate: number = 0.02;
+export class Menu {
+  private dimensions: Point;
+  private controller: Controller;
+  private background: Background;
+  private onStart: () => void;
+  private volume: Volume;
+  private lastRenderTime: number = 0;
+  private walletService: WalletService;
+  private showingMenu: boolean = true;
+  private showingControls: boolean = false;
+  private score: number = 0;
+  private color: string = "#FFFFFF";
 
-	public isAlive: boolean = true;
+  constructor(
+    dimensions: Point,
+    controller: Controller,
+    background: Background,
+    onStart: () => void,
+    volume: Volume,
+    walletService: WalletService
+  ) {
+    console.log("Menu constructor", dimensions);
+    this.dimensions = dimensions;
+    this.controller = controller;
+    this.background = background;
+    this.onStart = onStart;
+    this.volume = volume;
+    this.walletService = walletService;
+  }
 
-	private renderDimensions: Point;
-	private background: Background;
-	private isMenuOpen: boolean;
-	private playButtonPosition: Point;
-	private isButtonHovered: boolean;
-	private controller: Controller;
-	private onStartGame: () => void;
-	private opacity: number;
-	private lastPoints: number | undefined;
-	private scoreColor: string | undefined;
-	private buttonHover: Sound;
-	private buttonUnhover: Sound;
-	private buttonClick: Sound;
-	private controlPosition: Point;
-	private controlDiagram: Sprite;
+  public async Render(context: CanvasRenderingContext2D): Promise<void> {
+    if (!this.showingMenu) return;
 
-	public constructor(
-		renderDimensions: Point,
-		controller: Controller,
-		background: Background,
-		onStartGame: () => void,
-		volume: Volume
-	) {
-		this.renderDimensions = renderDimensions;
-		this.background = background;
-		this.isMenuOpen = true;
-		this.isButtonHovered = false;
-		this.controller = controller;
-		this.onStartGame = onStartGame;
+    // Draw background
+    context.fillStyle = "rgba(0, 0, 0, 0.8)";
+    context.fillRect(0, 0, this.dimensions.x, this.dimensions.y);
 
-		this.opacity = 0;
+    const click = this.controller.getClick();
+    const hasLives = await this.walletService.hasLivesRemaining();
+    const isPremium = await this.walletService.hasUnlimitedPlays();
 
-		this.playButtonPosition = {
-			x: (renderDimensions.x - Menu.buttonWidth) / 2,
-			y: (renderDimensions.y - (Menu.buttonHeight * 2)) + 0.5 // 0.5 for stroke alignment
-		};
+    if (this.showingControls) {
+      // Show controls screen
+      context.fillStyle = "#FFFFFF";
+      context.font = "30px Oswald";
+      context.textAlign = "center";
+      context.fillText(
+        "Controls",
+        this.dimensions.x / 2,
+        this.dimensions.y / 2 - 100
+      );
+      context.font = "20px Oswald";
+      context.fillText(
+        "Click and hold to move left/right",
+        this.dimensions.x / 2,
+        this.dimensions.y / 2 - 20
+      );
+      context.fillText(
+        "Release to jump",
+        this.dimensions.x / 2,
+        this.dimensions.y / 2 + 20
+      );
+      context.fillText(
+        "Click anywhere to start",
+        this.dimensions.x / 2,
+        this.dimensions.y / 2 + 80
+      );
 
-		this.buttonHover = volume.createSound("snd/button_on.wav", {});
-		this.buttonUnhover = volume.createSound("snd/button_off.wav", {});
-		this.buttonClick = volume.createSound("snd/button_click.wav", {});
+      if (click) {
+        if (hasLives) {
+          this.showingControls = false;
+          this.showingMenu = false;
+          await this.onStart();
+        }
+        this.controller.clearClick();
+      }
+      return;
+    }
 
-		this.controlPosition = { x: 45, y: 300};
-		this.controlDiagram = new Sprite("img/controls.png", { x: 390, y: 237 });
-	}
+    // Main menu
+    if (this.score > 0) {
+      context.fillStyle = this.color;
+      context.font = "40px Oswald";
+      context.textAlign = "center";
+      context.fillText(
+        `Score: ${this.score}`,
+        this.dimensions.x / 2,
+        this.dimensions.y / 2 - 50
+      );
+    }
 
-	public Render(renderContext: CanvasRenderingContext2D): Renderable[] {
-		let mouseClick: Point | undefined = this.controller.getClickPosition();
-		if ((mouseClick && this.isPointOnButton(mouseClick))
-			|| this.controller.isKeyPressed("enter")
-			|| this.controller.isKeyPressed("e")
-		) {
-			this.buttonClick.play();
-			this.onStartGame();
-		}
+    context.fillStyle = "#FFFFFF";
+    context.font = "30px Oswald";
+    context.textAlign = "center";
+    context.fillText(
+      "Click to Play",
+      this.dimensions.x / 2,
+      this.dimensions.y / 2
+    );
 
-		let buttonIsNowHovered: boolean = this.isPointOnButton(this.controller.getMousePosition() ?? {x: 0, y: 0});
+    context.font = "20px Oswald";
+    context.fillText(
+      isPremium
+        ? "Premium Player - Unlimited Plays!"
+        : `Remaining Lives: ${await this.walletService.getRemainingLives()}`,
+      this.dimensions.x / 2,
+      this.dimensions.y / 2 + 40
+    );
 
-		if (buttonIsNowHovered && !this.isButtonHovered) {
-			this.buttonHover.play();
-		} else if (!buttonIsNowHovered && this.isButtonHovered) {
-			this.buttonUnhover.play();
-		}
+    if (click && this.isClickInPlayArea(click)) {
+      if (hasLives) {
+        this.showingControls = true;
+      }
+      this.controller.clearClick();
+    }
+  }
 
-		this.isButtonHovered = buttonIsNowHovered;
+  public showMenu(score: number, color: string): void {
+    this.showingMenu = true;
+    this.showingControls = false;
+    this.score = score;
+    this.color = color;
+  }
 
-		this.background.Render(renderContext);
+  private isClickInPlayArea(click: Click): boolean {
+    // Make click area larger and centered
+    const buttonWidth = 300;
+    const buttonHeight = 150;
+    const buttonX = this.dimensions.x / 2 - buttonWidth / 2;
+    const buttonY = this.dimensions.y / 2 - buttonHeight / 2;
 
-		let horizontalCenter: number = (this.renderDimensions.x / 2);
+    const isInArea =
+      click.x >= buttonX &&
+      click.x <= buttonX + buttonWidth &&
+      click.y >= buttonY &&
+      click.y <= buttonY + buttonHeight;
 
-		renderContext.save();
-
-		renderContext.font = "" + Menu.titleFontSizeInPx + "px Oswald";
-		renderContext.fillStyle = "rgba(255,255,255," + this.opacity + ")";
-		renderContext.textAlign = "center";
-		renderContext.fillText("Quadrilactic", horizontalCenter, Menu.titleFontSizeInPx + 50);
-
-		if (this.lastPoints) {
-			renderContext.save();
-
-			renderContext.font = "" + Menu.scoreFontSizeInPx + "px Oswald";
-			renderContext.fillStyle = this.scoreColor ?? "";
-			renderContext.globalAlpha = this.opacity;
-			renderContext.textAlign = "center";
-			renderContext.fillText("Score: " + this.lastPoints, horizontalCenter, Menu.titleFontSizeInPx + Menu.scoreFontSizeInPx + 70);
-
-			renderContext.restore();
-		}
-
-		if (this.isButtonHovered) {
-			renderContext.fillRect(
-				this.playButtonPosition.x,
-				this.playButtonPosition.y,
-				Menu.buttonWidth,
-				Menu.buttonHeight);
-		}
-		renderContext.strokeStyle = "rgba(255,255,255," + this.opacity + ")";
-		renderContext.lineWidth = 3;
-		renderContext.strokeRect(
-			this.playButtonPosition.x,
-			this.playButtonPosition.y,
-			Menu.buttonWidth,
-			Menu.buttonHeight);
-
-		renderContext.font = "" + Menu.playFontSizeInPx + "px Oswald";
-		renderContext.fillStyle = (this.isButtonHovered ? "rgba(0,0,0," : "rgba(255,255,255,") + this.opacity + ")";
-		renderContext.textAlign = "center";
-		renderContext.fillText("Play", horizontalCenter, (Menu.playFontSizeInPx * 1.45) + this.playButtonPosition.y);
-
-		// Draw the controls
-		renderContext.globalAlpha = this.opacity;
-		renderContext.translate(this.controlPosition.x, this.controlPosition.y);
-		this.controlDiagram.Render(renderContext);
-
-		renderContext.restore();
-
-		this.opacity = Math.min(1, this.opacity + Menu.fadeInRate);
-
-		return [];
-	}
-
-	public showMenu(totalPoints: number, scoreColor: string): void {
-		this.isMenuOpen = true;
-		this.opacity = 0;
-		this.lastPoints = totalPoints;
-		this.scoreColor = scoreColor;
-	}
-
-	private isPointOnButton(point: Point): boolean {
-		return point
-			&& point.x > this.playButtonPosition.x
-			&& point.x < this.playButtonPosition.x + Menu.buttonWidth
-			&& point.y > this.playButtonPosition.y
-			&& point.y < this.playButtonPosition.y + Menu.buttonHeight;
-	}
+    console.log(
+      "Click in play area:",
+      isInArea,
+      "Click:",
+      click,
+      "Button area:",
+      { buttonX, buttonY, buttonWidth, buttonHeight }
+    );
+    return isInArea;
+  }
 }

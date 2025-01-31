@@ -18,6 +18,8 @@ export class Renderer {
   private static gameWidth: number = 480;
   private static minimumPlatformReboundSpeed: number = 10;
   private static timescale: number = 16;
+  private static readonly FPS = 60;
+  private static readonly FRAME_TIME = 1000 / Renderer.FPS;
 
   // Rendering references
   private canvas: HTMLCanvasElement;
@@ -40,12 +42,15 @@ export class Renderer {
   private scoreHistory: ScoreHistory;
   private animationFrameId: number | null = null;
   private walletService: WalletService;
+  private lastLogTime: number = 0;
+  private lastFrameTime: number = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
     controller: Controller,
     walletService: WalletService
   ) {
+    console.log("Renderer initialized with wallet service:", walletService);
     this.canvas = canvas;
     this.context = canvas.getContext("2d") as CanvasRenderingContext2D;
     this.controller = controller;
@@ -141,18 +146,26 @@ export class Renderer {
       },
       controller,
       this.background,
-      () => {
-        if (this.walletService.hasLivesRemaining()) {
-          this.walletService.decrementLives();
+      async () => {
+        console.log("Menu start callback triggered");
+        const hasLives = await walletService.hasLivesRemaining();
+        console.log("Has lives check:", hasLives);
+        if (hasLives) {
+          console.log("Starting game");
+          if (!(await walletService.hasUnlimitedPlays())) {
+            await walletService.decrementLives();
+          }
           this.player.Reset();
           this.platform.Reset();
           this.viewport.Reset();
           this.scoreboard.Reset();
           this.background.Reset();
           this.isRunning = true;
+          console.log("Game started, isRunning:", this.isRunning);
         }
       },
-      this.volume
+      this.volume,
+      walletService
     );
 
     this.viewport = new Viewport(
@@ -190,6 +203,7 @@ export class Renderer {
   }
 
   public Start(): void {
+    console.log("Renderer Start called, isRunning:", this.isRunning);
     if (this.isRunning) return;
     requestAnimationFrame((time: number) => this.Tick(time));
   }
@@ -212,20 +226,14 @@ export class Renderer {
 
     this.Draw();
 
-    if (this.isRunning === true) {
+    if (this.isRunning) {
       this.player.Tick(scaledTime);
       this.platform.Tick(scaledTime);
       Collider.processCollisions([this.player, this.platform]);
     }
 
     this.controller.clearClick();
-
-    if (this.isRunning || !this.isRunning) {
-      // Keep the loop going whether running or not
-      this.animationFrameId = requestAnimationFrame((time: number) =>
-        this.Tick(time)
-      );
-    }
+    requestAnimationFrame((time: number) => this.Tick(time));
   }
 
   private Draw(): void {

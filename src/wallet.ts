@@ -1,4 +1,9 @@
-import { Connection, PublicKey } from "@solana/web3.js";
+import {
+  Connection,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  clusterApiUrl,
+} from "@solana/web3.js";
 
 // Type definitions for Phantom wallet
 interface PhantomWindow extends Window {
@@ -18,9 +23,13 @@ export class WalletService {
   private walletAddress: string | null = null;
   private remainingLives: number = 10;
   private phantomWallet: PhantomWindow["solana"] | undefined;
+  private connection: Connection;
+  private readonly REQUIRED_SOL = 0.1;
+  private isPremium: boolean | null = null;
 
   constructor() {
     this.phantomWallet = (window as PhantomWindow)?.solana;
+    this.connection = new Connection(clusterApiUrl("devnet"), "confirmed");
     this.setupWalletListeners();
   }
 
@@ -39,15 +48,44 @@ export class WalletService {
     localStorage.setItem(`lives_${address}`, this.remainingLives.toString());
   }
 
-  public decrementLives(): void {
-    if (this.walletAddress && this.remainingLives > 0) {
+  public async decrementLives(): Promise<void> {
+    const hasUnlimited = await this.hasUnlimitedPlays();
+    if (!hasUnlimited && this.walletAddress && this.remainingLives > 0) {
       this.remainingLives--;
       this.saveLivesToStorage(this.walletAddress);
       document.dispatchEvent(new Event("livesUpdated"));
     }
   }
 
-  public hasLivesRemaining(): boolean {
+  private async checkSolBalance(address: string): Promise<boolean> {
+    try {
+      const publicKey = new PublicKey(address);
+      const balance = await this.connection.getBalance(publicKey);
+      const solBalance = balance / LAMPORTS_PER_SOL;
+      console.log("Current SOL balance:", solBalance); // Add logging for debugging
+      return solBalance >= this.REQUIRED_SOL;
+    } catch (error) {
+      console.error("Error checking SOL balance:", error);
+      return false;
+    }
+  }
+
+  public async hasUnlimitedPlays(): Promise<boolean> {
+    if (!this.walletAddress) return false;
+
+    // Cache the premium status to avoid too many RPC calls
+    if (this.isPremium === null) {
+      this.isPremium = await this.checkSolBalance(this.walletAddress);
+    }
+    return this.isPremium;
+  }
+
+  public async hasLivesRemaining(): Promise<boolean> {
+    // First check if user has unlimited plays
+    const hasUnlimited = await this.hasUnlimitedPlays();
+    if (hasUnlimited) return true;
+
+    // If not unlimited, check remaining free lives
     return this.remainingLives > 0;
   }
 
@@ -64,6 +102,8 @@ export class WalletService {
         this.isWalletConnected = true;
         if (this.walletAddress) {
           this.loadLivesFromStorage(this.walletAddress);
+          // Reset premium status on new connection
+          this.isPremium = null;
         }
         document.dispatchEvent(new Event("walletConnected"));
         return true;
@@ -73,6 +113,8 @@ export class WalletService {
       this.walletAddress = resp.publicKey.toString();
       this.isWalletConnected = true;
       this.loadLivesFromStorage(this.walletAddress);
+      // Reset premium status on new connection
+      this.isPremium = null;
       document.dispatchEvent(new Event("walletConnected"));
       return true;
     } catch (error) {
@@ -89,6 +131,8 @@ export class WalletService {
       this.walletAddress = this.phantomWallet?.publicKey?.toString() || null;
       if (this.walletAddress) {
         this.loadLivesFromStorage(this.walletAddress);
+        // Reset premium status on reconnect
+        this.isPremium = null;
       }
       document.dispatchEvent(new Event("walletConnected"));
     });
@@ -96,6 +140,7 @@ export class WalletService {
     this.phantomWallet.on("disconnect", () => {
       this.isWalletConnected = false;
       this.walletAddress = null;
+      this.isPremium = null;
       document.dispatchEvent(new Event("walletDisconnected"));
     });
 
@@ -118,8 +163,12 @@ export class WalletService {
     return this.walletAddress;
   }
 
-  public getRemainingLives(): number {
-    return this.remainingLives;
+  public async getRemainingLives(): Promise<string> {
+    const hasUnlimited = await this.hasUnlimitedPlays();
+    if (hasUnlimited) {
+      return "∞";
+    }
+    return this.remainingLives.toString();
   }
 
   initializePlayer(): void {
