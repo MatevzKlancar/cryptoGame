@@ -21,4 +21,9 @@ export class Sound {
 	public set volume(newVolume: number) {
 		this.sound.volume = newVolume;
 	}
+
+	public pause(): void {
+		this.sound.pause();
+		this.sound.currentTime = 0; // Reset to beginning
+	}
 }

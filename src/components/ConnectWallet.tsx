@@ -13,24 +13,23 @@ export const ConnectWallet: React.FC = () => {
   };
 
   return (
-    <button
-      onClick={handleConnect}
-      className="connect-wallet-btn"
-      style={{
-        position: "absolute",
-        top: "10px",
-        right: "10px",
-        padding: "10px 20px",
-        backgroundColor: "#4caf50",
-        color: "white",
-        border: "none",
-        borderRadius: "5px",
-        cursor: "pointer",
-        fontSize: "16px",
-        zIndex: 1000,
-      }}
-    >
-      {isConnected ? "Connected" : "Connect Wallet"}
-    </button>
+    <div className="wallet-info-container">
+      <button
+        onClick={handleConnect}
+        className="connect-wallet-btn"
+      >
+        {isConnected ? "Connected" : "Connect Wallet"}
+      </button>
+      {isConnected && (
+        <div className="wallet-info">
+          {walletService.getWalletAddress() && (
+            <span>
+              Wallet: {walletService.getWalletAddress()?.slice(0, 4)}...
+              {walletService.getWalletAddress()?.slice(-4)}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
   );
 };

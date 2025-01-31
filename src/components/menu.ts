@@ -137,7 +137,7 @@ export class Menu implements Renderable {
     renderContext.fillStyle = `rgba(255,255,255,${this.opacity})`;
     renderContext.textAlign = "center";
     renderContext.fillText(
-      "Quadrilactic",
+      "Brokie",
       horizontalCenter,
       Menu.titleFontSizeInPx + 50
     );

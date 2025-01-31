@@ -20,6 +20,7 @@ export class Renderer {
   private static timescale: number = 16;
   private static readonly FPS = 60;
   private static readonly FRAME_TIME = 1000 / Renderer.FPS;
+  private static readonly DEATH_SCREEN_DURATION: number = 4000; // 4 seconds in milliseconds
 
   // Rendering references
   private canvas: HTMLCanvasElement;
@@ -44,6 +45,8 @@ export class Renderer {
   private walletService: WalletService;
   private lastLogTime: number = 0;
   private lastFrameTime: number = 0;
+  private isDeathScreen: boolean = false;
+  private deathScreenTimer: number = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -64,12 +67,12 @@ export class Renderer {
       controller
     );
 
-    this.backgroundMusic = this.volume.createSound("snd/music.wav", {
+    this.backgroundMusic = this.volume.createSound("snd/music.mp3", {
       isLooping: true,
     });
     this.backgroundMusic.play();
 
-    this.deathSound = this.volume.createSound("snd/death.wav", {});
+    this.deathSound = this.volume.createSound("snd/death.mp3", {});
 
     let playerPosition: MovingPoint = {
       dX: 2,
@@ -160,6 +163,8 @@ export class Renderer {
           this.viewport.Reset();
           this.scoreboard.Reset();
           this.background.Reset();
+          this.isDeathScreen = false;
+          this.startBackgroundMusic();
           this.isRunning = true;
           console.log("Game started, isRunning:", this.isRunning);
         }
@@ -182,16 +187,12 @@ export class Renderer {
       this.viewport.SlideUpTo(-this.player.yPosition + 50);
       this.background.SlideUpTo(-this.player.yPosition);
 
-      if (
-        this.player.yPosition > -(this.viewport.offset - this.canvas.height)
-      ) {
+      if (this.player.yPosition > -(this.viewport.offset - this.canvas.height)) {
         this.isRunning = false;
+        this.isDeathScreen = true;
+        this.deathScreenTimer = performance.now();
+        this.stopBackgroundMusic();
         this.deathSound.play();
-        this.scoreHistory.addScore(
-          this.scoreboard.totalPoints,
-          this.player.fillColor
-        );
-        this.menu.showMenu(this.scoreboard.totalPoints, this.player.fillColor);
       }
 
       if (originalOnMove) {
@@ -239,10 +240,43 @@ export class Renderer {
   private Draw(): void {
     if (this.isRunning) {
       this.viewport.Render(this.lastFps);
+    } else if (this.isDeathScreen) {
+      this.viewport.Render(this.lastFps);
+      
+      this.context.save();
+      this.context.fillStyle = "rgba(255, 0, 0, 0.3)";
+      this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      this.context.font = "60px Oswald";
+      this.context.fillStyle = "white";
+      this.context.textAlign = "center";
+      this.context.fillText("YOU'RE BROKE BOI", this.canvas.width / 2, this.canvas.height / 2);
+      
+      if (performance.now() - this.deathScreenTimer >= Renderer.DEATH_SCREEN_DURATION) {
+        this.isDeathScreen = false;
+        this.scoreHistory.addScore(
+          this.scoreboard.totalPoints,
+          this.player.fillColor
+        );
+        this.menu.showMenu(this.scoreboard.totalPoints, this.player.fillColor);
+      }
+      this.context.restore();
     } else {
       this.menu.Render(this.context);
     }
 
     this.volume.Render(this.context);
+  }
+
+  private stopBackgroundMusic(): void {
+    if (this.backgroundMusic) {
+      this.backgroundMusic.pause();
+    }
+  }
+
+  private startBackgroundMusic(): void {
+    if (this.backgroundMusic) {
+      this.backgroundMusic.play();
+    }
   }
 }

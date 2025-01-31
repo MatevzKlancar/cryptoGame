@@ -4,6 +4,17 @@ $foreground-color: #b4b4b4;
 $background-color: #121212;
 $highlight-color: #66eeff;
 
+// Add Matrix animation keyframes
+@keyframes matrix-fade {
+  0% { opacity: 0; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+// Matrix colors
+$matrix-green: #00ff41;
+$matrix-dark-green: #003b00;
+
 html {
   min-height: 100%;
 }
@@ -13,8 +24,10 @@ body {
   padding: 0;
   min-height: 100%;
   background: linear-gradient(
-    $background-color,
-    color.adjust($background-color, $lightness: 10%)
+    to bottom,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 15, 2, 0.8) 50%,
+    rgba(0, 20, 0, 0.6) 100%
   );
   color: $foreground-color;
   font-family: "Roboto", sans-serif;
@@ -51,24 +64,76 @@ a:hover {
 }
 
 #viewport {
-  background-color: rgba(0, 0, 0, 0.3);
-  border: 1px solid $foreground-color;
+  background-color: rgba(0, 15, 2, 0.4);
+  border: 2px solid rgba(0, 255, 65, 0.3);
   border-radius: 8px;
-  box-shadow: 10px 10px 50px black;
+  box-shadow: 
+    0 0 60px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 255, 65, 0.3),
+    0 0 40px rgba(0, 255, 65, 0.2),
+    inset 0 0 25px rgba(0, 255, 65, 0.15);
+  animation: matrix-glow 4s ease-in-out infinite;
+}
+
+@keyframes matrix-glow {
+  0%, 100% {
+    box-shadow: 
+      0 0 60px rgba(0, 0, 0, 0.8),
+      0 0 20px rgba(0, 255, 65, 0.3),
+      0 0 40px rgba(0, 255, 65, 0.2),
+      inset 0 0 25px rgba(0, 255, 65, 0.15);
+  }
+  50% {
+    box-shadow: 
+      0 0 60px rgba(0, 0, 0, 0.8),
+      0 0 30px rgba(0, 255, 65, 0.4),
+      0 0 60px rgba(0, 255, 65, 0.3),
+      inset 0 0 35px rgba(0, 255, 65, 0.25);
+  }
+}
+
+.wallet-info-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1000;
 }
 
 .wallet-info {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.95);
   padding: 10px 20px;
   border-radius: 8px;
-  color: white;
+  color: #00ff41;
   font-family: "Oswald", sans-serif;
-  display: flex;
-  gap: 20px;
-  z-index: 10;
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 65, 0.2),
+    inset 0 0 15px rgba(0, 255, 65, 0.1);
+}
+
+.connect-wallet-btn {
+  background-color: rgba(0, 0, 0, 0.95) !important;
+  color: #00ff41 !important;
+  border: 1px solid rgba(0, 255, 65, 0.3) !important;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: "Oswald", sans-serif;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 0 20px rgba(0, 255, 65, 0.2),
+    inset 0 0 15px rgba(0, 255, 65, 0.1);
+
+  &:hover {
+    background-color: rgba(0, 255, 65, 0.2) !important;
+    box-shadow: 
+      0 0 30px rgba(0, 255, 65, 0.3),
+      inset 0 0 20px rgba(0, 255, 65, 0.2);
+  }
 }
 
 .score-history {
@@ -76,23 +141,29 @@ a:hover {
   left: 20px;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.95);
   padding: 20px;
   border-radius: 10px;
   color: white;
   font-family: "Oswald", sans-serif;
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 65, 0.2),
+    inset 0 0 15px rgba(0, 255, 65, 0.1);
 
   h2 {
     margin: 0 0 15px 0;
     font-size: 24px;
     text-align: left;
-    color: $highlight-color;
+    color: #00ff41;
   }
 
   .score-item {
     font-size: 20px;
     margin: 8px 0;
     text-align: left;
+    color: #00ff41 !important;
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
   }
 }
 
