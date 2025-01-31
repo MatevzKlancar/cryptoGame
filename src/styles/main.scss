@@ -96,4 +96,47 @@ a:hover {
   }
 }
 
+.leaderboard {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+  font-family: "Oswald", sans-serif;
+  min-width: 200px;
+
+  h2 {
+    margin: 0 0 15px 0;
+    font-size: 24px;
+    text-align: left;
+    color: #66eeff;
+  }
+
+  .scores-list {
+    .score-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      font-size: 16px;
+
+      .rank {
+        color: #66eeff;
+        width: 30px;
+      }
+
+      .address {
+        color: #b4b4b4;
+        margin: 0 10px;
+      }
+
+      .score {
+        font-weight: bold;
+      }
+    }
+  }
+}
+
 // ... rest of the CSS ...

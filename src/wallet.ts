@@ -244,6 +244,12 @@ export class WalletService {
   }
 
   public isConnected(): boolean {
+    console.log("Checking wallet connection:", {
+      isWalletConnected: this.isWalletConnected,
+      walletAddress: this.walletAddress,
+      phantomWallet: this.phantomWallet?.isConnected,
+    });
+
     return this.isWalletConnected && this.walletAddress !== null;
   }
 
@@ -309,6 +315,61 @@ export class WalletService {
     } catch (error) {
       console.error("Error checking SOL balance:", error);
       return false;
+    }
+  }
+
+  public async saveScore(score: number): Promise<void> {
+    try {
+      console.log("WalletService.saveScore called with score:", score);
+
+      if (!this.isConnected()) {
+        console.error("Cannot save score: wallet not connected");
+        return;
+      }
+
+      const walletAddress = this.getWalletAddress();
+      console.log("Attempting to save score for wallet:", walletAddress);
+
+      const { data, error } = await supabase
+        .from("player_scores")
+        .insert([
+          {
+            wallet_address: walletAddress,
+            score: Math.floor(score),
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.error("Supabase error saving score:", error);
+        return;
+      }
+
+      console.log("Score saved successfully:", data);
+    } catch (error) {
+      console.error("Error in saveScore:", error);
+    }
+  }
+
+  public async getTopScores(
+    limit: number = 10
+  ): Promise<Array<{ score: number; wallet_address: string }>> {
+    try {
+      const { data, error } = await supabase
+        .from("player_scores")
+        .select("score, wallet_address")
+        .order("score", { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error("Error fetching scores:", error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error in getTopScores:", error);
+      return [];
     }
   }
 }

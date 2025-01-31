@@ -173,7 +173,7 @@ export class Renderer {
     this.platform.viewport = this.viewport;
 
     let originalOnMove: (amountMoved: Point) => void = this.player.onMove;
-    this.player.onMove = (amountMoved: Point) => {
+    this.player.onMove = async (amountMoved: Point) => {
       this.viewport.SlideUpTo(-this.player.yPosition + 50);
       this.background.SlideUpTo(-this.player.yPosition);
 
@@ -182,11 +182,23 @@ export class Renderer {
       ) {
         this.isRunning = false;
         this.deathSound.play();
-        this.scoreHistory.addScore(
-          this.scoreboard.totalPoints,
-          this.player.fillColor
-        );
-        this.menu.showMenu(this.scoreboard.totalPoints, this.player.fillColor);
+
+        const finalScore = this.scoreboard.totalPoints;
+        console.log("Death detected, final score:", finalScore);
+
+        try {
+          // First update the UI
+          console.log("Adding score to history...");
+          await this.scoreHistory.addScore(finalScore, this.player.fillColor);
+          console.log("Score added to history");
+
+          // Verify wallet connection
+          console.log("Wallet connected:", this.walletService.isConnected());
+        } catch (error) {
+          console.error("Error handling death:", error);
+        }
+
+        this.menu.showMenu(finalScore, this.player.fillColor);
       }
 
       if (originalOnMove) {
@@ -194,6 +206,10 @@ export class Renderer {
       }
     };
 
+    console.log(
+      "Initializing ScoreHistory with wallet service:",
+      walletService
+    );
     this.scoreHistory = new ScoreHistory();
 
     this.initializeGameControls();
