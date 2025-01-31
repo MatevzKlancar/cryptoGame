@@ -18,7 +18,7 @@ export class Menu implements Renderable {
   public isAlive: boolean = true;
   private renderDimensions: Point;
   private background: Background;
-  private isMenuOpen: boolean;
+  private isMenuOpen: boolean = true;
   private playButtonPosition: Point;
   private isButtonHovered: boolean;
   private controller: Controller;
@@ -32,9 +32,10 @@ export class Menu implements Renderable {
   private controlPosition: Point;
   private controlDiagram: Sprite;
   private walletService: WalletService;
-  private hasLives: boolean = true;
+  private hasLives: boolean = false;
   private isPremium: boolean = false;
-  private remainingLives: string = "10";
+  private remainingLives: string = "0";
+  private isProcessingCallback: boolean = false;
 
   public constructor(
     renderDimensions: Point,
@@ -46,7 +47,6 @@ export class Menu implements Renderable {
   ) {
     this.renderDimensions = renderDimensions;
     this.background = background;
-    this.isMenuOpen = true;
     this.isButtonHovered = false;
     this.controller = controller;
     this.onStartGame = onStartGame;
@@ -64,14 +64,33 @@ export class Menu implements Renderable {
     this.controlPosition = { x: 45, y: 300 };
     this.controlDiagram = new Sprite("img/controls.png", { x: 390, y: 237 });
 
-    this.updateWalletStatus();
+    this.updateWalletStatus().catch(console.error);
   }
 
-  private async updateWalletStatus(): Promise<void> {
-    if (this.walletService) {
-      this.hasLives = await this.walletService.hasLivesRemaining();
+  public async updateWalletStatus(): Promise<void> {
+    try {
+      if (!this.walletService.isConnected()) {
+        console.log("Wallet not connected");
+        return;
+      }
+
+      const lives = await this.walletService.getRemainingLives();
+      console.log("Menu received lives:", lives);
+      this.remainingLives = lives;
+
       this.isPremium = await this.walletService.hasUnlimitedPlays();
-      this.remainingLives = await this.walletService.getRemainingLives();
+
+      const livesCount = parseInt(lives);
+      this.hasLives = livesCount > 0 || this.isPremium;
+
+      console.log("Menu state after update:", {
+        remainingLives: this.remainingLives,
+        hasLives: this.hasLives,
+        isPremium: this.isPremium,
+        livesCount,
+      });
+    } catch (error) {
+      console.error("Error updating wallet status:", error);
     }
   }
 
@@ -176,12 +195,11 @@ export class Menu implements Renderable {
     return [];
   }
 
-  public showMenu(totalPoints: number, scoreColor: string): void {
+  public async showMenu(points?: number, color?: string): Promise<void> {
     this.isMenuOpen = true;
-    this.opacity = 0;
-    this.lastPoints = totalPoints;
-    this.scoreColor = scoreColor;
-    this.updateWalletStatus();
+    this.lastPoints = points;
+    this.scoreColor = color;
+    await this.updateWalletStatus();
   }
 
   private isPointOnButton(point: Point | Click): boolean {
@@ -192,5 +210,21 @@ export class Menu implements Renderable {
       point.y > this.playButtonPosition.y &&
       point.y < this.playButtonPosition.y + Menu.buttonHeight
     );
+  }
+
+  public get menuOpen(): boolean {
+    return this.isMenuOpen;
+  }
+
+  public async triggerPlayCallback(): Promise<void> {
+    if (this.isMenuOpen) {
+      await this.updateWalletStatus(); // Update status before checking
+      console.log("Triggering play callback, hasLives:", this.hasLives);
+
+      if (this.hasLives && this.onStartGame) {
+        this.isMenuOpen = false;
+        await this.onStartGame();
+      }
+    }
   }
 }

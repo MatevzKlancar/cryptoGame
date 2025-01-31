@@ -10,18 +10,28 @@ function App() {
   const { isConnected, walletService } = useWallet();
   const [remainingLives, setRemainingLives] = useState<string>("0");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [canPlay, setCanPlay] = useState<boolean>(false);
 
   useEffect(() => {
     const updateLives = async () => {
       if (walletService) {
+        console.log("Updating lives in App.tsx");
         const lives = await walletService.getRemainingLives();
+        const hasUnlimited = await walletService.hasUnlimitedPlays();
+        console.log("App.tsx state update:", {
+          lives,
+          hasUnlimited,
+          isConnected,
+        });
         setRemainingLives(lives);
+        setCanPlay(parseInt(lives) > 0 || hasUnlimited);
       }
     };
 
     updateLives();
-    // Listen for lives updates
+
     const handleLivesUpdate = () => {
+      console.log("Lives updated event received");
       updateLives();
     };
     document.addEventListener("livesUpdated", handleLivesUpdate);
@@ -29,20 +39,23 @@ function App() {
     return () => {
       document.removeEventListener("livesUpdated", handleLivesUpdate);
     };
-  }, [walletService]);
+  }, [walletService, isConnected]);
 
   useEffect(() => {
-    if (walletService) {
-      setWalletAddress(walletService.getWalletAddress());
-    }
-  }, [walletService]);
+    console.log("Canvas initialization check:", {
+      hasCanvas: !!canvasRef.current,
+      isConnected,
+      hasWalletService: !!walletService,
+      canPlay,
+    });
 
-  useEffect(() => {
-    if (!canvasRef.current || !isConnected) return;
+    if (!canvasRef.current || !isConnected || !walletService) return;
 
     const canvas = canvasRef.current;
     const controller = new Controller(canvas);
     const renderer = new Renderer(canvas, controller, walletService);
+
+    console.log("Starting renderer");
     renderer.Start();
 
     // Ensure keyboard events when loaded in an iframe (fix for itch.io)
@@ -52,10 +65,16 @@ function App() {
     };
 
     return () => {
-      // Add cleanup if needed
+      console.log("Cleaning up renderer");
       renderer.Stop();
     };
-  }, [isConnected, walletService]);
+  }, [isConnected, walletService, canPlay]);
+
+  useEffect(() => {
+    if (walletService) {
+      setWalletAddress(walletService.getWalletAddress());
+    }
+  }, [walletService]);
 
   return (
     <div className="game-container">
@@ -72,7 +91,7 @@ function App() {
             )}
             <span>Lives: {remainingLives}</span>
           </div>
-          {remainingLives > "0" ? (
+          {canPlay ? (
             <canvas ref={canvasRef} id="viewport" width="480" height="800" />
           ) : (
             <div className="no-lives-message">
