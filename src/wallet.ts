@@ -4,7 +4,15 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
   clusterApiUrl,
+  Transaction,
+  SystemProgram,
 } from "@solana/web3.js";
+import {
+  createTransferInstruction,
+  getAssociatedTokenAddress,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 
 // Type definitions for Phantom wallet
 interface PhantomWindow extends Window {
@@ -12,6 +20,7 @@ interface PhantomWindow extends Window {
     isConnected: boolean;
     connect(): Promise<{ publicKey: { toString(): string } }>;
     disconnect(): Promise<void>;
+    signTransaction(transaction: Transaction): Promise<Transaction>;
     on(event: string, callback: () => void): void;
     publicKey?: { toString(): string };
   };
@@ -26,6 +35,12 @@ export class WalletService {
   private connection: Connection;
   private readonly REQUIRED_SOL = 0.1;
   private isPremium: boolean | null = null;
+  private readonly USDC_MINT = new PublicKey(
+    "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
+  );
+  private readonly GAME_WALLET = new PublicKey(
+    "8aHomzu9KdbqNQA4WUKaxmSZP34PuY1DaRTPpvRk5Zuh"
+  );
 
   constructor() {
     this.phantomWallet = (window as PhantomWindow)?.solana;
@@ -370,6 +385,93 @@ export class WalletService {
     } catch (error) {
       console.error("Error in getTopScores:", error);
       return [];
+    }
+  }
+
+  public async buyTickets(amount: number): Promise<boolean> {
+    try {
+      if (!this.isConnected() || !window.solana || !this.walletAddress) {
+        console.error("Wallet not connected");
+        return false;
+      }
+
+      const userPublicKey = new PublicKey(this.walletAddress);
+
+      // Get the user's token account
+      const userTokenAccount = await getAssociatedTokenAddress(
+        this.USDC_MINT,
+        userPublicKey
+      );
+
+      // Get the game wallet's token account
+      const gameTokenAccount = await getAssociatedTokenAddress(
+        this.USDC_MINT,
+        this.GAME_WALLET
+      );
+
+      // Create transfer instruction
+      const transferInstruction = createTransferInstruction(
+        userTokenAccount,
+        gameTokenAccount,
+        userPublicKey,
+        amount * 1_000_000 // USDC has 6 decimals
+      );
+
+      // Create and send transaction
+      const transaction = new Transaction().add(transferInstruction);
+      const { blockhash } = await this.connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = userPublicKey;
+
+      // Request signature from user
+      const signed = await window.solana.signTransaction(transaction);
+      const signature = await this.connection.sendRawTransaction(
+        signed.serialize()
+      );
+      await this.connection.confirmTransaction(signature);
+
+      // First, check if the user already has tickets
+      const { data: existingData } = await supabase
+        .from("player_tickets")
+        .select("remaining_tickets")
+        .eq("wallet_address", this.walletAddress)
+        .single();
+
+      let error;
+      if (existingData) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from("player_tickets")
+          .update({
+            remaining_tickets: existingData.remaining_tickets + amount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("wallet_address", this.walletAddress);
+        error = updateError;
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from("player_tickets")
+          .insert([
+            {
+              wallet_address: this.walletAddress,
+              remaining_tickets: amount,
+            },
+          ]);
+        error = insertError;
+      }
+
+      if (error) {
+        console.error("Error saving tickets:", error);
+        return false;
+      }
+
+      // Dispatch event to update UI
+      window.dispatchEvent(new Event("ticketsUpdated"));
+      return true;
+    } catch (error) {
+      console.error("Error buying tickets:", error);
+      return false;
     }
   }
 }

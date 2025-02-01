@@ -3,6 +3,7 @@ import { Renderer } from "./components/renderer";
 import { Controller } from "./components/controller";
 import { useWallet } from "./context/WalletContext";
 import { ConnectWallet } from "./components/ConnectWallet";
+import { TicketStatus } from "./components/TicketStatus";
 import "./styles/main.scss";
 
 function App() {
@@ -89,14 +90,15 @@ function App() {
                 {walletAddress.slice(-4)}
               </span>
             )}
-            <span>Lives: {remainingLives}</span>
+            <span>Practice Lives: {remainingLives}</span>
           </div>
+          <TicketStatus />
           {canPlay ? (
             <canvas ref={canvasRef} id="viewport" width="480" height="800" />
           ) : (
             <div className="no-lives-message">
               <h2>No more free tries remaining!</h2>
-              <p>Purchase more lives to continue playing.</p>
+              <p>Buy tickets to compete on the leaderboard!</p>
             </div>
           )}
         </>

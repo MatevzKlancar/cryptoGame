@@ -6,9 +6,15 @@ $highlight-color: #66eeff;
 
 // Add Matrix animation keyframes
 @keyframes matrix-fade {
-  0% { opacity: 0; }
-  50% { opacity: 0.8; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 // Matrix colors
@@ -67,28 +73,20 @@ a:hover {
   background-color: rgba(0, 15, 2, 0.4);
   border: 2px solid rgba(0, 255, 65, 0.3);
   border-radius: 8px;
-  box-shadow: 
-    0 0 60px rgba(0, 0, 0, 0.9),
-    0 0 20px rgba(0, 255, 65, 0.3),
-    0 0 40px rgba(0, 255, 65, 0.2),
-    inset 0 0 25px rgba(0, 255, 65, 0.15);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 255, 65, 0.3),
+    0 0 40px rgba(0, 255, 65, 0.2), inset 0 0 25px rgba(0, 255, 65, 0.15);
   animation: matrix-glow 4s ease-in-out infinite;
 }
 
 @keyframes matrix-glow {
-  0%, 100% {
-    box-shadow: 
-      0 0 60px rgba(0, 0, 0, 0.8),
-      0 0 20px rgba(0, 255, 65, 0.3),
-      0 0 40px rgba(0, 255, 65, 0.2),
-      inset 0 0 25px rgba(0, 255, 65, 0.15);
+  0%,
+  100% {
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 255, 65, 0.3),
+      0 0 40px rgba(0, 255, 65, 0.2), inset 0 0 25px rgba(0, 255, 65, 0.15);
   }
   50% {
-    box-shadow: 
-      0 0 60px rgba(0, 0, 0, 0.8),
-      0 0 30px rgba(0, 255, 65, 0.4),
-      0 0 60px rgba(0, 255, 65, 0.3),
-      inset 0 0 35px rgba(0, 255, 65, 0.25);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 65, 0.4),
+      0 0 60px rgba(0, 255, 65, 0.3), inset 0 0 35px rgba(0, 255, 65, 0.25);
   }
 }
 
@@ -109,8 +107,7 @@ a:hover {
   color: #00ff41;
   font-family: "Oswald", sans-serif;
   border: 1px solid rgba(0, 255, 65, 0.3);
-  box-shadow: 
-    0 0 20px rgba(0, 255, 65, 0.2),
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.2),
     inset 0 0 15px rgba(0, 255, 65, 0.1);
 }
 
@@ -124,14 +121,12 @@ a:hover {
   font-size: 16px;
   font-family: "Oswald", sans-serif;
   transition: all 0.3s ease;
-  box-shadow: 
-    0 0 20px rgba(0, 255, 65, 0.2),
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.2),
     inset 0 0 15px rgba(0, 255, 65, 0.1);
 
   &:hover {
     background-color: rgba(0, 255, 65, 0.2) !important;
-    box-shadow: 
-      0 0 30px rgba(0, 255, 65, 0.3),
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.3),
       inset 0 0 20px rgba(0, 255, 65, 0.2);
   }
 }
@@ -147,8 +142,7 @@ a:hover {
   color: white;
   font-family: "Oswald", sans-serif;
   border: 1px solid rgba(0, 255, 65, 0.3);
-  box-shadow: 
-    0 0 20px rgba(0, 255, 65, 0.2),
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.2),
     inset 0 0 15px rgba(0, 255, 65, 0.1);
 
   h2 {
@@ -205,6 +199,78 @@ a:hover {
 
       .score {
         font-weight: bold;
+      }
+    }
+  }
+}
+
+.ticket-status {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 15px;
+  border-radius: 8px;
+  color: white;
+
+  .ticket-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+
+    .tooltip {
+      position: relative;
+      cursor: help;
+      color: #66eeff;
+
+      .tooltip-text {
+        visibility: hidden;
+        position: absolute;
+        right: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 8px;
+        border-radius: 4px;
+        width: 200px;
+        margin-right: 10px;
+        font-size: 14px;
+      }
+
+      &:hover .tooltip-text {
+        visibility: visible;
+      }
+    }
+  }
+
+  .ticket-purchase {
+    display: flex;
+    gap: 8px;
+
+    .ticket-amount-input {
+      width: 60px;
+      padding: 4px;
+      border: 1px solid #66eeff;
+      background: rgba(0, 0, 0, 0.3);
+      color: white;
+      border-radius: 4px;
+    }
+
+    .buy-tickets-btn {
+      padding: 4px 12px;
+      background: #66eeff;
+      color: black;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+
+      &:hover:not(:disabled) {
+        opacity: 0.9;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
     }
   }

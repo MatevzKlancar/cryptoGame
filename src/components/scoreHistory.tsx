@@ -2,18 +2,6 @@ import { createRoot } from "react-dom/client";
 import React from "react";
 import { supabase } from "@/lib/supabase";
 
-// Add Phantom wallet type definition
-declare global {
-  interface Window {
-    solana?: {
-      isConnected: boolean;
-      connect(): Promise<{ publicKey: { toString(): string } }>;
-      disconnect(): Promise<void>;
-      publicKey?: { toString(): string };
-    };
-  }
-}
-
 interface Score {
   points: number;
   color: string;
@@ -56,44 +44,53 @@ export class ScoreHistory {
     // Save to database if wallet is connected
     const wallet = window.solana;
     if (wallet?.isConnected && wallet.publicKey) {
-      console.log("Checking high score for:", points);
       try {
-        // First get the current high score
-        const { data: currentHighScore } = await supabase
-          .from("player_scores")
-          .select("score")
+        // Check if player has tickets
+        const { data: ticketData } = await supabase
+          .from("player_tickets")
+          .select("remaining_tickets")
           .eq("wallet_address", wallet.publicKey.toString())
-          .order("score", { ascending: false })
-          .limit(1)
           .single();
 
-        // Only save if it's a new high score
-        if (!currentHighScore || points > currentHighScore.score) {
-          console.log("New high score! Saving:", points);
-          const { error } = await supabase.from("player_scores").upsert(
-            {
-              wallet_address: wallet.publicKey.toString(),
-              score: points,
-            },
-            {
-              onConflict: "wallet_address", // This requires a unique constraint on wallet_address
-              ignoreDuplicates: false,
-            }
-          );
+        if (ticketData && ticketData.remaining_tickets > 0) {
+          console.log("Recording competitive score:", points);
 
-          if (error) {
-            console.error("Error saving high score:", error);
+          // Use a ticket first
+          const { error: ticketError } = await supabase
+            .from("player_tickets")
+            .update({
+              remaining_tickets: ticketData.remaining_tickets - 1,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("wallet_address", wallet.publicKey.toString());
+
+          if (ticketError) {
+            console.error("Error using ticket:", ticketError);
+            return;
+          }
+
+          // Save the score - now with timestamp to allow multiple scores
+          const { error: scoreError } = await supabase
+            .from("player_scores")
+            .insert([
+              {
+                wallet_address: wallet.publicKey.toString(),
+                score: points,
+                created_at: new Date().toISOString(),
+              },
+            ]);
+
+          if (scoreError) {
+            console.error("Error saving score:", scoreError);
           } else {
-            console.log("High score saved successfully");
+            console.log("Competitive score saved successfully");
+            window.dispatchEvent(new Event("ticketsUpdated"));
           }
         } else {
-          console.log(
-            "Not a new high score. Current best:",
-            currentHighScore.score
-          );
+          console.log("Practice run - score not recorded in leaderboard");
         }
       } catch (error) {
-        console.error("Error handling high score:", error);
+        console.error("Error handling score:", error);
       }
     }
   }
