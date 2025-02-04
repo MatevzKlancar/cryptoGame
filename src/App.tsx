@@ -5,6 +5,7 @@ import { useWallet } from "./context/WalletContext";
 import { ConnectWallet } from "./components/ConnectWallet";
 import { TicketStatus } from "./components/TicketStatus";
 import "./styles/main.scss";
+import { Leaderboard } from "./components/Leaderboard";
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -93,6 +94,7 @@ function App() {
             <span>Practice Lives: {remainingLives}</span>
           </div>
           <TicketStatus />
+          <Leaderboard />
           {canPlay ? (
             <canvas ref={canvasRef} id="viewport" width="480" height="800" />
           ) : (
